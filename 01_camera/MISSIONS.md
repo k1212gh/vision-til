@@ -29,7 +29,7 @@
 
 **M7** — 지연 측정법: 폰으로 PC 화면의 시계(초 단위 스톱워치 등)를 찍고, PC 창에 보이는 시각과 실제 시각의 차이를 읽는다.
 
-## 이해 확인 (ARCHITECTURE.md 5절) 답을 먼저 채팅에 적고 M1 시작
+## 이해 확인 (ARCHITECTURE.md 6절) 답을 먼저 채팅에 적고 M1 시작
 1. JPEG 품질 90%로 올리면?
 2. FrameQueue maxsize=100이면?
 3. imshow를 aiohttp 핸들러 안에서 부르면?
