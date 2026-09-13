@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CatDome 폰 카메라 송신기</title>
+<style>
+  body { margin: 0; background: #111; color: #eee; font-family: sans-serif; }
+  .bar { padding: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  video { width: 100%; background: #000; }
+  button, select { font-size: 16px; padding: 8px 12px; }
+  #stat { font-family: monospace; font-size: 14px; }
+</style>
+</head>
+<body>
+<!-- HTML 골격은 제공. 아래 <script> 안의 TODO 를 채우세요. -->
+<div class="bar">
+  <button id="start">카메라 시작</button>
+  <select id="facing">
+    <option value="environment">후면</option>
+    <option value="user">전면</option>
+  </select>
+  <select id="fps">
+    <option value="10">10 fps</option>
+    <option value="15" selected>15 fps</option>
+    <option value="30">30 fps</option>
+  </select>
+  <select id="q">
+    <option value="0.5">JPEG 50%</option>
+    <option value="0.7" selected>JPEG 70%</option>
+    <option value="0.9">JPEG 90%</option>
+  </select>
+  <span id="stat">대기 중</span>
+</div>
+<video id="v" autoplay playsinline muted></video>
+<canvas id="c" hidden></canvas>
+
+<script>
+// 흐름 (ARCHITECTURE.md 1절): 카메라 → <video> → <canvas> → JPEG → WebSocket
+const video  = document.getElementById("v");
+const canvas = document.getElementById("c");
+const stat   = document.getElementById("stat");
+let ws = null;      // WebSocket 객체
+let timer = null;   // setInterval 핸들
+let sent = 0, bytes = 0, lastTick = performance.now();   // 통계용
+
+function connectWS() {
+  // TODO(M6-1):
+  //   - location.protocol 이 "https:" 면 "wss", 아니면 "ws"
+  //   - ws = new WebSocket(`${proto}://${location.host}/ws`)
+  //   - ws.binaryType = "arraybuffer"
+  //   - onopen  → stat.textContent = "연결됨"
+  //   - onclose → 3초 뒤 connectWS() 재시도 (setTimeout)
+}
+
+async function startCamera() {
+  // TODO(M6-2):
+  //   - facing = document.getElementById("facing").value
+  //   - 이미 video.srcObject 가 있으면 getTracks().forEach(t => t.stop()) 로 정리
+  //   - stream = await navigator.mediaDevices.getUserMedia({
+  //       video: { facingMode: facing, width: {ideal: 1280}, height: {ideal: 720} }, audio: false })
+  //   - video.srcObject = stream; await video.play()
+  //   - canvas.width/height = video.videoWidth/videoHeight   (play() 이후에 값이 채워짐)
+  //   - ws 가 없으면 connectWS(); restartLoop()
+}
+
+function restartLoop() {
+  // TODO(M6-3):
+  //   - timer 가 있으면 clearInterval
+  //   - fps 셀렉트 값으로 timer = setInterval(sendFrame, 1000 / fps)
+}
+
+function sendFrame() {
+  // TODO(M6-4):
+  //   - ws 없거나 ws.readyState !== WebSocket.OPEN 이면 return
+  //   - ws.bufferedAmount > 200000 이면 return   ← 프레임 버리기 (ARCHITECTURE.md "왜 프레임을 버리는가")
+  //   - ctx = canvas.getContext("2d"); ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+  //   - q = Number(qSelect.value)
+  //   - canvas.toBlob(blob => blob.arrayBuffer().then(buf => ws.send(buf)), "image/jpeg", q)
+  // TODO(M6-5, 선택): 1초마다 fps 와 KB/s 를 stat 에 표시 (sent, bytes, lastTick 변수 활용)
+}
+
+document.getElementById("start").onclick  = () => startCamera().catch(e => stat.textContent = "카메라 실패: " + e.message);
+document.getElementById("facing").onchange = () => { if (video.srcObject) startCamera(); };
+document.getElementById("fps").onchange    = restartLoop;
+</script>
+</body>
+</html>

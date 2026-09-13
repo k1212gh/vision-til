@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CatDome 폰 카메라 송신기</title>
+<style>
+  body { margin: 0; background: #111; color: #eee; font-family: sans-serif; }
+  .bar { padding: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  video { width: 100%; background: #000; }
+  button, select { font-size: 16px; padding: 8px 12px; }
+  #stat { font-family: monospace; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <button id="start">카메라 시작</button>
+  <select id="facing">
+    <option value="environment">후면</option>
+    <option value="user">전면</option>
+  </select>
+  <select id="fps">
+    <option value="10">10 fps</option>
+    <option value="15" selected>15 fps</option>
+    <option value="30">30 fps</option>
+  </select>
+  <select id="q">
+    <option value="0.5">JPEG 50%</option>
+    <option value="0.7" selected>JPEG 70%</option>
+    <option value="0.9">JPEG 90%</option>
+  </select>
+  <span id="stat">대기 중</span>
+</div>
+<video id="v" autoplay playsinline muted></video>
+<canvas id="c" hidden></canvas>
+
+<script>
+// 흐름: 카메라 → <video> → <canvas>에 그리기 → JPEG로 압축 → WebSocket으로 전송
+const video = document.getElementById("v");
+const canvas = document.getElementById("c");
+const stat = document.getElementById("stat");
+let ws = null, timer = null, sent = 0, bytes = 0, lastTick = performance.now();
+
+function connectWS() {
+  // 페이지가 https면 WebSocket도 wss(암호화)로
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.binaryType = "arraybuffer";
+  ws.onopen = () => stat.textContent = "연결됨";
+  ws.onclose = () => { stat.textContent = "끊김, 3초 후 재연결"; setTimeout(connectWS, 3000); };
+  ws.onerror = () => stat.textContent = "WebSocket 오류";
+}
+
+async function startCamera() {
+  const facing = document.getElementById("facing").value;
+  if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+  // getUserMedia: 브라우저에 카메라 권한 요청. HTTPS에서만 동작.
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+    audio: false,
+  });
+  video.srcObject = stream;
+  await video.play();
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  if (!ws) connectWS();
+  restartLoop();
+}
+
+function restartLoop() {
+  if (timer) clearInterval(timer);
+  const fps = Number(document.getElementById("fps").value);
+  timer = setInterval(sendFrame, 1000 / fps);
+}
+
+function sendFrame() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  // 이미 보내는 중인 데이터가 밀려 있으면 이번 프레임은 버린다 (지연 누적 방지 핵심!)
+  if (ws.bufferedAmount > 200_000) return;
+  const q = Number(document.getElementById("q").value);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    blob.arrayBuffer().then(buf => {
+      ws.send(buf);
+      sent++; bytes += buf.byteLength;
+      const now = performance.now();
+      if (now - lastTick > 1000) {
+        const s = (now - lastTick) / 1000;
+        stat.textContent = `${canvas.width}x${canvas.height} ${(sent / s).toFixed(1)} fps ${(bytes / s / 1024).toFixed(0)} KB/s`;
+        sent = 0; bytes = 0; lastTick = now;
+      }
+    });
+  }, "image/jpeg", q);
+}
+
+document.getElementById("start").onclick = () => startCamera().catch(e => stat.textContent = "카메라 실패: " + e.message);
+document.getElementById("facing").onchange = () => { if (video.srcObject) startCamera(); };
+document.getElementById("fps").onchange = restartLoop;
+</script>
+</body>
+</html>

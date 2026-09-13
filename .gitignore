@@ -1,0 +1,27 @@
+# 인증서/개인키 — 절대 올리지 않음
+*.pem
+*.key
+*.crt
+
+# 파이썬
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 실습 산출물 (이미지, 영상, 모델 가중치)
+snapshots/
+*.jpg
+*.jpeg
+*.png
+*.mp4
+*.avi
+*.pt
+*.onnx
+runs/
+
+# 에디터/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
