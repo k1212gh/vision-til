@@ -30,29 +30,33 @@
 | WebRTC | 브라우저 직접 재생, 초저지연 | 사용자에게 송출할 때 |
 
 ## 실습 준비 (스마트폰)
-### Android
-1. Play 스토어에서 **IP Webcam** (Pavel Khlebovich) 설치
-2. 앱 실행 → 맨 아래 **Start server**
-3. 화면에 http://192.168.x.x:8080 이 뜸 → 영상 URL은 http://192.168.x.x:8080/video
-4. PC와 폰이 **같은 Wi-Fi** 에 있어야 함
+### 기본: 폰 브라우저 + 내가 만든 PC 서버 (앱 설치 없음)
+구조 설명은 [ARCHITECTURE.md](ARCHITECTURE.md), 실행 순서는 [MISSIONS.md](MISSIONS.md), 서버 설명은 [myserver/README.md](myserver/README.md).
+```powershell
+cd C:\Users\k1212\Desktop\Toy\vision\01_camera\myserver
+python make_cert.py     # 최초 1회
+python server.py        # 터미널에 뜨는 https://192.168.x.x:8443 을 폰 브라우저에서 열기
+```
+폰: 인증서 경고 → [고급] → [계속] → **카메라 시작** → 권한 허용. PC 창에 폰 영상이 뜨면 성공.
+PC와 폰이 **같은 Wi-Fi** 에 있어야 함.
 
-### iPhone
-1. App Store에서 **IP Camera Lite** 설치 → 서버 시작
-2. 앱이 보여주는 RTSP 주소 사용 (예: rtsp://192.168.x.x:8554/live)
+### 대안: IP Webcam 앱 (남의 서버를 빌리는 방식, 비교용)
+- Android: Play 스토어 **IP Webcam** → Start server → http://192.168.x.x:8080/video
+- iPhone: **IP Camera Lite** → 앱이 보여주는 RTSP 주소
+- 이 주소를 아래 phone_cam.py 의 --url 로 넘기면 됨
 
-## 실행
+## 실행 (phone_cam.py — VideoCapture 방식)
 ```powershell
 cd C:\Users\k1212\Desktop\Toy\vision\01_camera
-python phone_cam.py --url http://192.168.0.10:8080/video
-# 폰 없이 노트북 웹캠으로 테스트
-python phone_cam.py --url 0
+python phone_cam.py --url 0                                 # 노트북 웹캠 (가상캠이 0번이면 1 또는 2)
+python phone_cam.py --url http://192.168.0.10:8080/video    # IP Webcam 앱
 ```
 
-키: q 종료 / s 스냅샷 저장 / g 흑백 토글 / p 픽셀값 찍기 모드(클릭)
+키: q 종료 / s 스냅샷 저장
 
 ## 과제
 1. 폰 카메라를 연결해서 FPS와 해상도를 확인하고 적어 두기
 2. 폰 앞에서 손을 흔들고, PC 화면에 보이기까지 얼마나 늦는지 체감 지연 측정
    (팁: 폰으로 PC 화면의 시계를 찍으면 두 시계 차이가 곧 지연)
-3. IP Webcam 앱 설정에서 해상도를 640x480 으로 낮추면 FPS/지연이 어떻게 변하는지 비교
-4. 스냅샷 찍어서 frame[y, x] 값이 실제 색과 맞는지 p 모드로 확인
+3. index.html 의 JPEG 품질(50/70/90%)과 fps(10/15/30)를 바꾸면 KB/s 와 지연이 어떻게 변하는지 비교
+4. 스냅샷을 찍고 파이썬에서 cv2.imread 로 열어 frame[y, x] 값이 실제 색과 맞는지 확인 (BGR 순서!)

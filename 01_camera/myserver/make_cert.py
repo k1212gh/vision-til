@@ -2,7 +2,7 @@
 M3. 자체 서명 인증서 생성
 
 왜 필요한가: 폰 브라우저는 https 페이지에서만 카메라를 열어 준다 (ARCHITECTURE.md 3절).
-x509 API 자체는 비전 학습 대상이 아니므로 대부분 채워 두었습니다. TODO 두 개만 채우세요.
+x509 API 자체는 비전 학습 대상이 아니므로 흐름만 보면 됩니다: 개인키 생성 → 인증서에 IP 목록(SAN) 넣고 서명 → 파일 저장.
 
 실행:  python make_cert.py  →  cert.pem, key.pem 생성
 """
@@ -20,12 +20,15 @@ from cryptography.x509.oid import NameOID
 def local_ip() -> str:
     """이 PC가 Wi-Fi에서 쓰는 IP (예: 192.168.75.6) 를 문자열로 반환.
 
-    TODO(M3-1):
-      트릭: UDP 소켓을 만들어 외부 주소(8.8.8.8, 80)에 connect 하면 (실제 패킷은 안 나감)
-      OS가 "이 목적지로 나갈 때 쓸 내 IP"를 골라 준다 → s.getsockname()[0]
-      socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 사용, 끝나면 close.
+    트릭: UDP 소켓을 외부 주소(8.8.8.8:80)에 connect 하면 실제 패킷은 나가지 않지만
+    OS가 "이 목적지로 나갈 때 쓸 내 IP"를 골라 준다 → getsockname()[0]
     """
-    raise NotImplementedError
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    finally:
+        s.close()
 
 
 def main():
@@ -41,7 +44,7 @@ def main():
     san = x509.SubjectAlternativeName([
         x509.DNSName("localhost"),
         x509.IPAddress(ipaddress.ip_address("127.0.0.1")),
-        # TODO(M3-2): 위 두 줄을 참고해 PC의 Wi-Fi IP(ip 변수)도 추가
+        x509.IPAddress(ipaddress.ip_address(ip)),   # 폰이 접속할 PC의 Wi-Fi IP
     ])
 
     cert = (

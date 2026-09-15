@@ -13,7 +13,6 @@
 </style>
 </head>
 <body>
-<!-- HTML 골격은 제공. 아래 <script> 안의 TODO 를 채우세요. -->
 <div class="bar">
   <button id="start">카메라 시작</button>
   <select id="facing">
@@ -45,39 +44,61 @@ let timer = null;   // setInterval 핸들
 let sent = 0, bytes = 0, lastTick = performance.now();   // 통계용
 
 function connectWS() {
-  // TODO(M6-1):
-  //   - location.protocol 이 "https:" 면 "wss", 아니면 "ws"
-  //   - ws = new WebSocket(`${proto}://${location.host}/ws`)
-  //   - ws.binaryType = "arraybuffer"
-  //   - onopen  → stat.textContent = "연결됨"
-  //   - onclose → 3초 뒤 connectWS() 재시도 (setTimeout)
+  // https 페이지에서는 wss(암호화)만 허용됨
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(proto + "://" + location.host + "/ws");
+  ws.binaryType = "arraybuffer";
+  ws.onopen  = () => { stat.textContent = "연결됨"; };
+  ws.onclose = () => { stat.textContent = "끊김, 3초 후 재연결"; setTimeout(connectWS, 3000); };
+  ws.onerror = () => { stat.textContent = "WebSocket 오류"; };
 }
 
 async function startCamera() {
-  // TODO(M6-2):
-  //   - facing = document.getElementById("facing").value
-  //   - 이미 video.srcObject 가 있으면 getTracks().forEach(t => t.stop()) 로 정리
-  //   - stream = await navigator.mediaDevices.getUserMedia({
-  //       video: { facingMode: facing, width: {ideal: 1280}, height: {ideal: 720} }, audio: false })
-  //   - video.srcObject = stream; await video.play()
-  //   - canvas.width/height = video.videoWidth/videoHeight   (play() 이후에 값이 채워짐)
-  //   - ws 가 없으면 connectWS(); restartLoop()
+  const facing = document.getElementById("facing").value;
+  // 이미 켜져 있으면 정리 (전/후면 전환 시)
+  if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+  // getUserMedia: 브라우저에 카메라 권한 요청. https(또는 localhost)에서만 동작.
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+    audio: false,
+  });
+  video.srcObject = stream;
+  await video.play();
+  // videoWidth/Height 는 play() 이후에 채워짐
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  if (!ws) connectWS();
+  restartLoop();
 }
 
 function restartLoop() {
-  // TODO(M6-3):
-  //   - timer 가 있으면 clearInterval
-  //   - fps 셀렉트 값으로 timer = setInterval(sendFrame, 1000 / fps)
+  if (timer) clearInterval(timer);
+  const fps = Number(document.getElementById("fps").value);
+  timer = setInterval(sendFrame, 1000 / fps);
 }
 
 function sendFrame() {
-  // TODO(M6-4):
-  //   - ws 없거나 ws.readyState !== WebSocket.OPEN 이면 return
-  //   - ws.bufferedAmount > 200000 이면 return   ← 프레임 버리기 (ARCHITECTURE.md "왜 프레임을 버리는가")
-  //   - ctx = canvas.getContext("2d"); ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-  //   - q = Number(qSelect.value)
-  //   - canvas.toBlob(blob => blob.arrayBuffer().then(buf => ws.send(buf)), "image/jpeg", q)
-  // TODO(M6-5, 선택): 1초마다 fps 와 KB/s 를 stat 에 표시 (sent, bytes, lastTick 변수 활용)
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  // 아직 전송 못 한 데이터가 밀려 있으면 이번 프레임은 버림 (지연 누적 방지, ARCHITECTURE.md 3절)
+  if (ws.bufferedAmount > 200000) return;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);   // <video> → RGBA 픽셀
+  const q = Number(document.getElementById("q").value);
+  canvas.toBlob(blob => {                                     // RGBA → JPEG bytes
+    if (!blob) return;
+    blob.arrayBuffer().then(buf => {
+      ws.send(buf);                                           // JPEG bytes → WebSocket
+      sent++; bytes += buf.byteLength;
+      const now = performance.now();
+      if (now - lastTick > 1000) {
+        const s = (now - lastTick) / 1000;
+        stat.textContent = canvas.width + "x" + canvas.height + " "
+          + (sent / s).toFixed(1) + " fps " + (bytes / s / 1024).toFixed(0) + " KB/s";
+        sent = 0; bytes = 0; lastTick = now;
+      }
+    });
+  }, "image/jpeg", q);
 }
 
 document.getElementById("start").onclick  = () => startCamera().catch(e => stat.textContent = "카메라 실패: " + e.message);

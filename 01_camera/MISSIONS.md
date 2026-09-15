@@ -1,13 +1,14 @@
-# 01 미션 시트
+# 01 미션 시트 (실행 체크리스트)
 
-규칙: 한 미션씩. 끝나면 코드를 보여주고 리뷰 받기. 막히면 힌트 요청 (힌트 1 → 힌트 2 → _ref 위치).
-읽을 순서: [ARCHITECTURE.md](ARCHITECTURE.md) → 이 문서 → 뼈대 파일의 TODO.
+코드는 완성되어 있습니다 (2026-09-15). 각 미션은 **코드를 읽고 → 실행하고 → "성공 확인"란을 눈으로 확인**하는 순서로 진행합니다.
+읽을 순서: [ARCHITECTURE.md](ARCHITECTURE.md) → 이 문서 → 각 파일의 docstring과 주석.
+막히거나 이해 안 되는 줄이 있으면 그 줄을 지목해서 물어보기.
 
 | # | 파일 | 목표 | 성공 확인 |
 |---|---|---|---|
 | M1 | phone_cam.py | 웹캠 열고 창에 띄우고 q로 종료 | `python phone_cam.py --url 0` 실행 시 창이 뜨고 q로 닫힘 |
 | M2 | phone_cam.py | 해상도·FPS·read() ms HUD, s로 스냅샷 | 화면에 `1280x720 30.0fps` 근처 표시, snapshots/에 jpg 생성 |
-| M3 | myserver/make_cert.py | TODO 2개 채우기 | 실행 시 cert.pem/key.pem 생성, 출력에 PC IP(192.168.x.x) 포함 |
+| M3 | myserver/make_cert.py | 인증서 생성 (local_ip 트릭, SAN 읽어보기) | 실행 시 cert.pem/key.pem 생성, 출력에 PC IP(192.168.x.x) 포함 |
 | M4 | myserver/server.py | HTTPS로 index.html 서빙 (`index`, `create_app`, `make_ssl_context`, `start_server_thread`, main 앞부분) | PC 브라우저에서 https://localhost:8443 → 경고 무시 → "카메라 시작" 버튼 보임 |
 | M5 | myserver/server.py | `/ws` 수신 + `FrameQueue` + `decode_jpeg` + 메인 루프 imshow | server.py 띄우고 `python test_client.py` 실행 → PC 창에 웹캠 영상 보임 |
 | M6 | myserver/index.html | 카메라 → canvas → JPEG → WebSocket 송신 | 폰에서 https://<PC IP>:8443 열고 카메라 시작 → stat에 fps/KB/s 표시 |
